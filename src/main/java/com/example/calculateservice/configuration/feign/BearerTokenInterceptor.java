@@ -1,9 +1,10 @@
 package com.example.calculateservice.configuration.feign;
 
-import com.example.calculateservice.exceptions.InvalidJwtTokenException;
+import com.example.jwtstarter.exception.InvalidJwtTokenException;
 import feign.*;
 import org.springframework.security.core.context.*;
 import org.springframework.stereotype.*;
+
 
 @Component
 public class BearerTokenInterceptor implements RequestInterceptor {
