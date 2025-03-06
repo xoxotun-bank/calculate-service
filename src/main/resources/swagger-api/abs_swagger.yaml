@@ -1,0 +1,326 @@
+openapi: 3.0.0
+info:
+  title: Калькулятор депозитных продуктов
+  version: 1.1.1
+servers:
+  - url: http://localhost:18082/api/v1/abs
+tags:
+  - name: ABS
+    description: Контракты получения данных из АБС
+paths:
+  /clients:
+    get:
+      security:
+        - BearerAuth: []
+      summary: Метод идентификации клиента по пасспорту
+      tags:
+        - ABS
+      operationId: getClient
+      parameters:
+        - in: query
+          name: passport
+          description: Данные паспорта (серия номер) для идентификации клиента
+          schema:
+            type: string
+            minLength: 10
+            maxLength: 10
+            pattern: ^[0-9]+$
+          example: '0000000000'
+          required: true
+      responses:
+        '200':
+          description: Успешный ответ с найденным клиентом
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientDto'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              examples:
+                example1:
+                  summary: Пример ошибки с кодом 2001
+                  value:
+                    code: 2001
+                    message: 'Ошибка запроса,  отсутствуют следующие параметры запроса: passport.'
+                example2:
+                  summary: Пример ошибки с кодом 2002
+                  value:
+                    code: 2001
+                    message: 'Ошибка запроса,  некорректные данные в следующих параметрах: passport - 0000132.'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              example:
+                code: 2003
+                message: 'AccessToken не валиден'
+
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              example:
+                code: 2004
+                message: 'Данные о клиенте с указанным идентификатором не найдены'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              example:
+                code: 500
+                message: Внутреняя ошибка сервера или базы данных
+  /financial-products:
+    get:
+      security:
+        - BearerAuth: []
+      tags:
+        - ABS
+      summary: Выборка финансовых продуктов
+      description: Запрос на получение продуктов по заданными параметрам
+      responses:
+        '200':
+          description: Успешный ответ с выборкой фин. продуктов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancialProductsResponseDto'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              example:
+                code: 2003
+                message: 'AccessToken invalid'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              example:
+                code: 500
+                message: Внутреняя ошибка сервера или базы данных
+  /dictionaries:
+    get:
+      security:
+        - BearerAuth: []
+      summary: Получение справочных значений для фильтров вклада
+      tags:
+        - ABS
+      description: Запрос на получение продуктов по заданными параметрам
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParametersDto'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              example:
+                code: 2003
+                message: 'AccessToken не валиден'
+        '404':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              example:
+                code: 2005
+                message: Данные о справочниках не найдены
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              example:
+                code: 500
+                message: Внутреняя ошибка сервера или базы данных
+  /cache-invalidate:
+    post:
+      security:
+        - BearerAuth: []
+      summary: Запрос на очистку кэша
+      tags:
+        - ABS
+      description: Метод для очистки кэша с данными финансовых продуктов и справочников
+      responses:
+        '200':
+          description: Успешный ответ
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              example:
+                code: 2003
+                message: 'AccessToken не валиден'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              example:
+                code: 500
+                message: Внутреняя ошибка сервера или базы данных
+
+components:
+  schemas:
+    FinancialProductsResponseDto:
+      type: object
+      properties:
+        products:
+          type: array
+          description: Список вкладов
+          items:
+            $ref: '#/components/schemas/AbsFinancialProductDto'
+
+    AbsFinancialProductDto:
+      type: object
+      properties:
+        financialProduct:
+          $ref: '#/components/schemas/FinancialProductDto'
+        minSum:
+          type: number
+          description: Минимальная сумма для вклада
+          example: 5000
+        maxSum:
+          type: number
+          description: Максимальная сумма для вклада
+          example: 5000000
+    FinancialProductDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 12345
+        name:
+          type: string
+          description: Название вклада
+          example: АТБ. Вклад
+        percent:
+          type: number
+          description: Процент по вкладу в год
+          example: 15.3
+        category:
+          type: string
+          description: Тип клиента, которому доступен вклад
+          example: Клиент
+        period:
+          type: integer
+          description: Период вклада в днях
+          example: 62
+        currency:
+          type: string
+          description: Валюта вклада (Трёхбуквенный ИСО-код валюты)
+          example: RUB
+        canDeposit:
+          type: boolean
+          description: Возможность пополнения с вклада
+          example: true
+        canWithdrawal:
+          type: boolean
+          description: Возможность снятия вклада
+          example: true
+        capitalizationToSameAccount:
+          type: boolean
+          description: Вклад с капитализацией на тот же акаунт
+          example: true
+        capitalizationPeriod:
+          type: string
+          description: Переиодичность выплат по вкладу
+          example: Ежедневно
+    ClientDto:
+      type: object
+      properties:
+        categories:
+          type: array
+          items:
+            type: string
+          example:
+            - Сотрудник
+            - Клиент
+        name:
+          type: string
+          description: Фамилия Имя Отчество
+          example: Иванов Иван Иванович
+        birthDate:
+          type: string
+          description: Дата рождения клиента, формат ГГГГ-ММ-ДД
+          format: date
+          example: '1985-05-15'
+        passport:
+          type: string
+          description: Серия и номер паспорта клиента, 10 цифр
+          example: '0000000000'
+    ParametersDto:
+      type: object
+      properties:
+        currencies:
+          type: array
+          items:
+            type: string
+            description: Валюта вклада (Трёхбуквенный ИСО-код валюты)
+          example:
+            - RUB
+            - CNY
+            - USD
+            - EUR
+        periods:
+          type: array
+          items:
+            type: integer
+            description: Период вклада в днях
+          example:
+            - 31
+            - 62
+            - 92
+            - 122
+            - 182
+            - 243
+            - 273
+            - 365
+            - 731
+            - 1098
+        capitalizationPeriods:
+          type: array
+          items:
+            type: string
+            description: Переиодичность выплат по вкладу
+          example:
+            - Ежедневно
+            - Ежеквартально
+            - Ежемесячно
+            - Ежегодно
+    ApiErrorResponseDto:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer

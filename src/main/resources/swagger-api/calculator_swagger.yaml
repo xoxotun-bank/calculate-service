@@ -1,0 +1,407 @@
+openapi: 3.0.0
+info:
+  title: МКС Calculator API
+  description: API for retrieving deposit products
+  version: 2.0.6
+servers:
+  - url: http://localhost:18081/api/v2/calculator
+paths:
+  /financial-products:
+    get:
+      security:
+        - BearerAuth: []
+      summary: Выборка финансовых продуктов
+      description: Запрос на получение продуктов по заданными параметрам
+      parameters:
+        - name: sum
+          in: query
+          description: Сумма вклада
+          required: true
+          schema:
+            type: number
+            example: 300000
+            minimum: 1
+        - name: categories
+          description: Тип клиента, которому доступен вклад
+          in: query
+          required: true
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: periods
+          description: Срок на который вклад можно открыть
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: integer
+              minimum: 1
+              maximum: 2147483647
+        - name: canDeposit
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Возможность пополнения с вклада
+        - name: canWithdrawal
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Возможность снятия с вклада
+        - name: capitalizationToSameAccount
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Есть ли капитализация
+        - name: currency
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: ^[A-Z]{3}$
+          description: Валюта вклада
+        - name: capitalizationPeriods
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+          description: Периодичность выплат вклада
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalculatedProductsResponseDto'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              examples:
+                example1:
+                  summary: Пример ошибки с кодом 3002
+                  value:
+                    code: 3002
+                    message: 'Ошибка запроса,  отсутствуют следующие параметры запроса: sum.'
+                example2:
+                  summary: Пример ошибки с кодом 3004
+                  value:
+                    code: 3004
+                    message: 'Ошибка запроса,  некорректные данные в следующих параметрах: sum - сто тысяч, period - 2147483648.'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              example:
+                code: 3003
+                message: 'Не удалось найти данные о финансовых продуктах по указанным параметрам'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              example:
+                code: 3001
+                message: AccessToken не валиден
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              example:
+                code: 500
+                message: Внутреняя ошибка сервера или базы данных
+
+  /payments-tables:
+    get:
+      security:
+        - BearerAuth: []
+      summary: Метод получения Календаря выплат по выбранному вкладу
+      description: Метод получения Календаря выплат по выбранному вкладу
+      parameters:
+        - name: capitalizationToSameAccount
+          in: query
+          required: true
+          schema:
+            type: boolean
+          description: Есть ли капитализация
+        - name: capitalizationPeriod
+          description: Периодичность капитализации/выплат по вкладу
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "Ежемесячно"
+        - name: sum
+          description: Сумма, которую клиент хочет разместить в банке
+          in: query
+          required: true
+          schema:
+            type: number
+            example: 300000
+            minimum: 0
+        - name: period
+          description: Срок на который вклад можно открыть
+          in: query
+          required: true
+          schema:
+            type: integer
+            example: 122
+        - name: percent
+          description: Процент по вкладу
+          in: query
+          required: true
+          schema:
+            type: number
+            description: Процент по вкладу в год
+            example: 15.3
+
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentsTableResponseDto'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              examples:
+                example1:
+                  summary: Пример ошибки с кодом 3002
+                  value:
+                    code: 3002
+                    message: 'Ошибка запроса,  отсутствуют следующие параметры запроса: sum.'
+                example2:
+                  summary: Пример ошибки с кодом 3004
+                  value:
+                    code: 3004
+                    message: 'Ошибка запроса,  некорректные данные в следующих параметрах: sum - сто тысяч'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              example:
+                code: 3003
+                message: 'Не удалось найти данные о финансовых продуктах по указанным параметрам'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              example:
+                code: 3001
+                message: AccessToken не валиден
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponseDto'
+              example:
+                code: 500
+                message: Внутреняя ошибка сервера или базы данных
+
+components:
+  schemas:
+    FinancialProductsParams:
+      type: object
+      required:
+        - sum
+        - categories
+        - currency
+      properties:
+        sum:
+          type: number
+          description: Сумма, которую клиент хочет разместить в банке
+          example: 300000
+          minimum: 0
+        categories:
+          type: array
+          items:
+            type: string
+            description: Тип клиента, которому доступен вклад
+        currency:
+          type: string
+          description: Валюта вклада (Трёхбуквенный ИСО-код валюты)
+          pattern: ^[A-Z]{3}$
+          example: RUB
+        periods:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 2147483647
+            example: 31
+          description: Период вклада в днях
+        canDeposit:
+          type: boolean
+          description: Возможность пополнения с вклада
+          example: true
+        canWithdrawal:
+          type: boolean
+          description: Возможность снятия вклада
+          example: true
+        capitalizationToSameAccount:
+          type: boolean
+          description: Вклад с капитализацией на тот же акаунт
+          example: true
+        capitalizationPeriods:
+          type: array
+          items:
+            type: string
+            example: Ежегодно
+          description: Переиодичность выплат по вкладу
+
+    ApiErrorResponseDto:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+    CalculatedProductsResponseDto:
+      type: object
+      properties:
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalculatedProductDto'
+
+    CalculatedProductDto:
+      type: object
+      required:
+        - financialProduct
+        - profit
+        - profitInPercent
+      properties:
+        financialProduct:
+          $ref: '#/components/schemas/FinancialProductDto'
+        profit:
+          type: number
+          example: 36857.33
+        profitInPercent:
+          type: number
+          example: 8.36
+        matchesParameters:
+          $ref: '#/components/schemas/MatchesParametersDto'
+    FinancialProductDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 12345
+        name:
+          type: string
+          description: Название вклада
+          example: АТБ. Вклад
+        percent:
+          type: number
+          description: Процент по вкладу в год
+          example: 15.3
+        category:
+          type: string
+          description: Тип клиента, которому доступен вклад
+          example: Клиент
+        period:
+          type: integer
+          description: Период вклада в днях
+          example: 62
+        currency:
+          type: string
+          description: Валюта вклада (Трёхбуквенный ИСО-код валюты)
+          example: RUB
+        canDeposit:
+          type: boolean
+          description: Возможность пополнения с вклада
+          example: true
+        canWithdrawal:
+          type: boolean
+          description: Возможность снятия вклада
+          example: true
+        capitalizationToSameAccount:
+          type: boolean
+          description: Вклад с капитализацией на тот же акаунт
+          example: true
+        capitalizationPeriod:
+          type: string
+          description: Переиодичность выплат по вкладу
+          example: Ежедневно
+    MatchesParametersDto:
+      type: object
+      properties:
+        period:
+          type: boolean
+        canDeposit:
+          type: boolean
+        canWithdrawal:
+          type: boolean
+        capitalizationToSameAccount:
+          type: boolean
+        capitalizationPeriod:
+          type: boolean
+
+    PaymentsTableResponseDto:
+      type: object
+      required:
+        - payments
+      properties:
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentDto'
+    PaymentDto:
+      type: object
+      required:
+        - date
+        - paymentAmount
+        - percent
+        - daysAmount
+      properties:
+        date:
+          type: string
+          description: Дата выплаты по вкладу
+          format: date
+          example: "02.07.24"
+        paymentAmount:
+          type: number
+          description: Выплата по вкладу в валюте на указанное число
+          example: 123.45
+        percent:
+          type: number
+          description: Выплата по вкладу в процентах на указанное число
+          example: 0.96
+        daysAmount:
+          type: integer
+          description: Количество дней в периоде, за который будет осуществлена выплата
+          example: 31
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
